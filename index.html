@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Maker</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tajawal Font for Arabic typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>صانع الميمز</h1>
+    </header>
+
+    <main>
+        <!-- Meme Editor Section -->
+        <section class="editor-container">
+            <div class="image-upload">
+                <label for="imageUpload" class="upload-label">
+                    <i class="fas fa-upload"></i>
+                    <span>اختر صورة</span>
+                </label>
+                <input type="file" id="imageUpload" accept="image/*" hidden>
+            </div>
+
+            <div class="canvas-container" id="canvasContainer">
+                <!-- Canvas will be inserted here via JavaScript -->
+                <div class="placeholder-message">
+                    <i class="fas fa-image"></i>
+                    <p>قم بتحميل صورة للبدء</p>
+                </div>
+            </div>
+
+            <div class="text-controls">
+                <button id="addTextBtn" class="btn">
+                    <i class="fas fa-plus"></i> إضافة نص
+                </button>
+                <div class="text-blocks-container" id="textBlocksContainer">
+                    <!-- Text blocks will be added here dynamically -->
+                </div>
+            </div>
+
+            <button id="saveMemeBtn" class="btn primary-btn">
+                <i class="fas fa-save"></i> حفظ الميم
+            </button>
+        </section>
+
+        <!-- Hero Section for Displaying Created Memes -->
+        <section class="hero-section" id="createdMemes">
+            <h2>الميمز المنشأة</h2>
+            <div class="memes-gallery" id="memesGallery">
+                <!-- Created memes will be displayed here -->
+                <div class="empty-gallery-message">
+                    <i class="fas fa-images"></i>
+                    <p>لم يتم إنشاء أي ميمز بعد</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Enlarged Meme View -->
+    <div class="modal" id="memeModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-image-container">
+                <!-- Enlarged meme will be displayed here -->
+            </div>
+            <a href="#" class="download-btn" id="downloadMeme">
+                <i class="fas fa-download"></i> تحميل
+            </a>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
