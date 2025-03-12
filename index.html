@@ -35,6 +35,47 @@
                 </div>
             </div>
 
+            <!-- Image Filter Controls -->
+            <div class="image-controls" id="imageControls">
+                <h3>تعديل الصورة</h3>
+                <div class="filters-container">
+                    <div class="filter-item">
+                        <label for="brightness">السطوع</label>
+                        <input type="range" id="brightness" min="0" max="200" value="100" class="filter-slider">
+                        <button class="reset-filter" data-filter="brightness" data-default="100" title="إعادة ضبط السطوع"><i class="fas fa-undo"></i></button>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="contrast">التباين</label>
+                        <input type="range" id="contrast" min="0" max="200" value="100" class="filter-slider">
+                        <button class="reset-filter" data-filter="contrast" data-default="100" title="إعادة ضبط التباين"><i class="fas fa-undo"></i></button>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="saturation">التشبع</label>
+                        <input type="range" id="saturation" min="0" max="200" value="100" class="filter-slider">
+                        <button class="reset-filter" data-filter="saturation" data-default="100" title="إعادة ضبط التشبع"><i class="fas fa-undo"></i></button>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="blur">التمويه</label>
+                        <input type="range" id="blur" min="0" max="10" value="0" class="filter-slider">
+                        <button class="reset-filter" data-filter="blur" data-default="0" title="إعادة ضبط التمويه"><i class="fas fa-undo"></i></button>
+                    </div>
+                </div>
+                
+                <div class="preset-filters">
+                    <h4>فلاتر جاهزة</h4>
+                    <div class="preset-filters-container">
+                        <button class="preset-filter-btn" data-preset="normal">عادي</button>
+                        <button class="preset-filter-btn" data-preset="grayscale">أبيض وأسود</button>
+                        <button class="preset-filter-btn" data-preset="sepia">سيبيا</button>
+                        <button class="preset-filter-btn" data-preset="vintage">قديم</button>
+                        <button class="preset-filter-btn" data-preset="dramatic">درامي</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="text-controls">
                 <button id="addTextBtn" class="btn">
                     <i class="fas fa-plus"></i> إضافة نص
