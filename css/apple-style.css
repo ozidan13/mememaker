@@ -50,17 +50,18 @@ body {
 }
 
 .hero-headline {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  margin-bottom: var(--spacing-md);
-  background: linear-gradient(to right, #000, #666);
+  margin-bottom: var(--spacing-lg);
+  background: linear-gradient(to right, var(--apple-blue), #5ac8fa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  transition: transform var(--transition-medium) ease;
 }
 
 .hero-subheadline {
   font-size: 1.5rem;
+  font-weight: 400;
   color: var(--apple-gray-dark);
   margin-bottom: var(--spacing-xl);
 }
@@ -71,25 +72,39 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
+  box-sizing: border-box;
 }
 
 /* Header styles that don't conflict */
 .apple-header {
-  padding: var(--spacing-lg) 0;
+  padding: var(--spacing-xl) 0;
   position: relative;
   z-index: 100;
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   text-align: center;
+  border-bottom: 1px solid rgba(210, 210, 215, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-medium) ease;
 }
 
 .apple-brand {
-  font-size: 2rem;
-  background: linear-gradient(to right, var(--apple-blue), #5ac8fa);
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--apple-blue), #5ac8fa, #34aadc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: -0.5px;
+  transition: transform var(--transition-fast) ease;
+}
+
+.apple-header .hero-subheadline {
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  color: var(--apple-gray-dark);
 }
 
 /* Features section - safe to style as it's a new addition */
@@ -178,45 +193,19 @@ body {
 /* Responsive Design - non-invasive */
 @media (max-width: 992px) {
   .hero-headline {
-    font-size: 3rem;
-  }
-  
-  .hero-subheadline {
-    font-size: 1.4rem;
-  }
-  
-  .features-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--spacing-lg);
-  }
-}
-
-@media (max-width: 768px) {
-  .hero-headline {
     font-size: 2.5rem;
   }
   
   .hero-subheadline {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
   
   .features-grid {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .apple-header {
-    padding: var(--spacing-md) 0;
-  }
-  
-  .apple-brand {
-    font-size: 1.6rem;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .hero-headline {
     font-size: 2rem;
   }
@@ -225,8 +214,37 @@ body {
     font-size: 1.1rem;
   }
   
+  .features-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  
+  .apple-header {
+    padding: var(--spacing-md) 0;
+  }
+  
+  .apple-brand {
+    font-size: 2rem;
+  }
+  
+  .apple-header .hero-subheadline {
+    font-size: 1rem;
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-headline {
+    font-size: 1.8rem;
+  }
+  
+  .hero-subheadline {
+    font-size: 1rem;
+  }
+  
   .feature-item {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
   }
   
   .feature-icon {
@@ -235,5 +253,13 @@ body {
   
   .feature-item h3 {
     font-size: 1.2rem;
+  }
+  
+  .apple-brand {
+    font-size: 1.8rem;
+  }
+  
+  .apple-header .hero-subheadline {
+    font-size: 0.9rem;
   }
 } 
