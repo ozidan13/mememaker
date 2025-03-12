@@ -292,21 +292,20 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="text-controls-row">
                 <input type="color" id="${textBlockId}-color" value="${defaultTextColor}" class="color-picker" title="لون النص">
                 <div class="size-controls">
-                    <button class="size-btn decrease-size" data-id="${textBlockId}" title="تصغير النص"><i class="fas fa-minus"></i></button>
-                    <span class="size-value" id="${textBlockId}-size">20</span>
-                    <button class="size-btn increase-size" data-id="${textBlockId}" title="تكبير النص"><i class="fas fa-plus"></i></button>
+                    <label for="${textBlockId}-size-slider">الحجم:</label>
+                    <input type="range" min="8" max="72" value="32" class="size-slider" id="${textBlockId}-size-slider">
+                    <span class="size-value" id="${textBlockId}-size">32</span>
                 </div>
                 <button class="delete-text-btn" data-id="${textBlockId}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
             <div class="text-controls-row stroke-controls">
-                <label>الحدود:</label>
                 <input type="color" id="${textBlockId}-stroke-color" value="${defaultStrokeColor}" class="color-picker" title="لون الحدود">
-                <div class="size-controls">
-                    <button class="size-btn decrease-stroke" data-id="${textBlockId}" title="تقليل سمك الحدود"><i class="fas fa-minus"></i></button>
-                    <span class="size-value" id="${textBlockId}-stroke-width">${defaultStrokeWidth}</span>
-                    <button class="size-btn increase-stroke" data-id="${textBlockId}" title="زيادة سمك الحدود"><i class="fas fa-plus"></i></button>
+                <div class="stroke-width-controls">
+                    <label for="${textBlockId}-stroke-slider">سمك الحدود:</label>
+                    <input type="range" min="0" max="10" value="2" class="stroke-slider" id="${textBlockId}-stroke-slider">
+                    <span class="size-value" id="${textBlockId}-stroke-width">2</span>
                 </div>
             </div>
         `;
@@ -328,16 +327,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTextColor(textBlockId, this.value);
         });
         
-        // Add size control event listeners
-        const decreaseSizeBtn = textBlock.querySelector(`.decrease-size[data-id="${textBlockId}"]`);
-        const increaseSizeBtn = textBlock.querySelector(`.increase-size[data-id="${textBlockId}"]`);
-        
-        decreaseSizeBtn.addEventListener('click', function() {
-            updateTextSize(textBlockId, -2); // Decrease by 2px
-        });
-        
-        increaseSizeBtn.addEventListener('click', function() {
-            updateTextSize(textBlockId, 2); // Increase by 2px
+        // Add size slider event listener
+        const sizeSlider = document.getElementById(`${textBlockId}-size-slider`);
+        sizeSlider.addEventListener('input', function() {
+            updateTextSizeAbsolute(textBlockId, parseInt(this.value));
         });
         
         // Add stroke color picker event listener
@@ -346,16 +339,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateStrokeColor(textBlockId, this.value);
         });
         
-        // Add stroke width control event listeners
-        const decreaseStrokeBtn = textBlock.querySelector(`.decrease-stroke[data-id="${textBlockId}"]`);
-        const increaseStrokeBtn = textBlock.querySelector(`.increase-stroke[data-id="${textBlockId}"]`);
-        
-        decreaseStrokeBtn.addEventListener('click', function() {
-            updateStrokeWidth(textBlockId, -1); // Decrease by 1px
-        });
-        
-        increaseStrokeBtn.addEventListener('click', function() {
-            updateStrokeWidth(textBlockId, 1); // Increase by 1px
+        // Add stroke width slider event listener
+        const strokeSlider = document.getElementById(`${textBlockId}-stroke-slider`);
+        strokeSlider.addEventListener('input', function() {
+            updateStrokeWidthAbsolute(textBlockId, parseInt(this.value));
         });
         
         // Add delete button event listener
@@ -1501,6 +1488,33 @@ document.addEventListener('DOMContentLoaded', function() {
         .canvas-text:hover {
             border-color: rgba(255, 255, 255, 0.7);
         }
+        
+        /* Styling for sliders */
+        .size-slider, .stroke-slider {
+            width: 100px;
+            margin: 0 10px;
+            vertical-align: middle;
+        }
+        
+        .size-controls, .stroke-width-controls {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .size-value {
+            min-width: 25px;
+            text-align: center;
+        }
+        
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+        }
     `;
     document.head.appendChild(style);
     
@@ -1528,10 +1542,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Force larger font
                     textBlocks[0].fontSize = 32;
+                    
+                    // Update slider and display for font size
+                    const sizeSlider = document.getElementById(`${textBlocks[0].id}-size-slider`);
                     const sizeElement = document.getElementById(`${textBlocks[0].id}-size`);
-                    if (sizeElement) {
-                        sizeElement.textContent = '32';
-                    }
+                    if (sizeSlider) sizeSlider.value = '32';
+                    if (sizeElement) sizeElement.textContent = '32';
                     
                     // Force render
                     drawImage();
@@ -1551,5 +1567,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 pendingCanvasUpdate = false;
             });
         }
+    }
+
+    // New function to update text size to an absolute value (for slider)
+    function updateTextSizeAbsolute(id, newSize) {
+        const textBlock = textBlocks.find(block => block.id === id);
+        if (!textBlock) return;
+        
+        // Get current size element
+        const sizeElement = document.getElementById(`${id}-size`);
+        if (!sizeElement) return;
+        
+        // Ensure size is within bounds
+        newSize = Math.max(8, Math.min(72, newSize));
+        
+        // Update data model
+        textBlock.fontSize = newSize;
+        
+        // Update DOM
+        sizeElement.textContent = newSize;
+        
+        // Update canvas immediately
+        drawImage();
+        
+        // Save to history
+        saveToHistory();
+    }
+
+    // New function to update stroke width to an absolute value (for slider)
+    function updateStrokeWidthAbsolute(id, newWidth) {
+        const textBlock = textBlocks.find(block => block.id === id);
+        if (!textBlock) return;
+        
+        // Get width display element
+        const widthDisplay = document.getElementById(`${id}-stroke-width`);
+        if (!widthDisplay) return;
+        
+        // Ensure width is within bounds
+        newWidth = Math.max(0, Math.min(10, newWidth));
+        
+        // Update data model
+        textBlock.strokeWidth = newWidth;
+        
+        // Update DOM
+        widthDisplay.textContent = newWidth;
+        
+        // Update canvas
+        drawImage();
+        
+        // Save to history
+        saveToHistory();
     }
 });
