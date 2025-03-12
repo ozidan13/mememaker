@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meme Maker</title>
+    <title>Meme Maker | صانع الميمز</title>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Tajawal Font for Arabic typography -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Original CSS - Primary styles -->
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Apple-inspired styling - Secondary, non-invasive enhancements -->
+    <!-- Apple-inspired styling - Secondary enhancements -->
     <link rel="stylesheet" href="css/apple-style.css">
+    <!-- Enhanced styling for more professional look -->
+    <link rel="stylesheet" href="css/enhanced-style.css">
 </head>
 <body>
+
+
     <main>
-        <!-- Meme Editor Section with Apple-inspired UI -->
+        <!-- Meme Editor Section with Enhanced UI -->
         <section class="container">
             <div class="editor-container">
                 <div class="image-upload">
@@ -34,7 +38,7 @@
                     </div>
                 </div>
 
-                <!-- Image Filter Controls with Apple styling -->
+                <!-- Image Filter Controls with enhanced styling -->
                 <div class="image-controls" id="imageControls">
                     <h3>تعديل الصورة</h3>
                     <div class="filters-container">
@@ -104,7 +108,7 @@
             </div>
         </section>
 
-        <!-- Features Section - Apple Style -->
+        <!-- Features Section - Enhanced Style -->
         <section class="features-section">
             <div class="container">
                 <h2 class="section-title">مميزات فريدة</h2>
@@ -127,12 +131,54 @@
                 </div>
             </div>
         </section>
+
+        <!-- How to Use Section -->
+        <section class="how-to-use-section">
+            <div class="container">
+                <h2 class="section-title">كيفية الاستخدام</h2>
+                <div class="steps-container">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>اختر صورة</h3>
+                            <p>قم بتحميل الصورة التي تريد استخدامها كقاعدة للميم</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>أضف نصوصاً</h3>
+                            <p>أضف النصوص التي تريدها وقم بتخصيصها</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>عدل وحرك</h3>
+                            <p>قم بتحريك النصوص وتغيير أحجامها وألوانها حسب رغبتك</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>احفظ وشارك</h3>
+                            <p>احفظ الميم وشاركه مع أصدقائك على وسائل التواصل الاجتماعي</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Footer - Apple Style -->
+    <!-- Footer - Enhanced Style -->
     <footer class="apple-footer">
         <div class="container">
             <p>صانع الميمز © 2023 | كل الحقوق محفوظة</p>
+            <div class="social-links">
+                <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+            </div>
         </div>
     </footer>
 
@@ -149,14 +195,72 @@
         </div>
     </div>
 
+    <!-- Notification System -->
+    <script src="js/notification-system.js"></script>
+    
     <!-- Primary JavaScript - Core functionality -->
     <script src="js/app.js"></script>
     
     <!-- Fix script to ensure functionality works -->
     <script src="js/upload-fix.js"></script>
     
-    <!-- Apple-style visual enhancements (minimal, non-invasive) - load these last -->
+    <!-- Apple-style visual enhancements - load these last -->
     <script src="js/apple-animations.js"></script>
     <script src="js/apple-showcase.js"></script>
+    
+    <!-- Enhanced animations and UI interactions -->
+    <script src="js/enhanced-animations.js"></script>
+    
+    <script>
+    // Initialize notifications for user actions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show welcome notification
+        setTimeout(() => {
+            notifications.info('مرحباً بك في منشئ الميمات المطور. قم بتحميل صورة للبدء!', 'أهلاً بك');
+        }, 1500);
+        
+        // Hook into save button for success notification
+        const saveMemeBtn = document.getElementById('saveMemeBtn');
+        if (saveMemeBtn) {
+            const originalClick = saveMemeBtn.onclick;
+            saveMemeBtn.onclick = function(e) {
+                // Call original handler if it exists
+                if (typeof originalClick === 'function') {
+                    originalClick.call(this, e);
+                }
+                
+                // Show success notification after a brief delay
+                setTimeout(() => {
+                    notifications.success('تم حفظ الميم بنجاح!');
+                }, 500);
+            };
+        }
+        
+        // Hook into image upload for notification
+        const imageUpload = document.getElementById('imageUpload');
+        if (imageUpload) {
+            imageUpload.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    notifications.success('تم تحميل الصورة بنجاح!');
+                }
+            });
+        }
+        
+        // Hook into add text button
+        const addTextBtn = document.getElementById('addTextBtn');
+        if (addTextBtn) {
+            const originalClick = addTextBtn.onclick;
+            addTextBtn.onclick = function(e) {
+                // Call original handler if it exists
+                if (typeof originalClick === 'function') {
+                    originalClick.call(this, e);
+                }
+                
+                // Show info notification
+                notifications.info('تم إضافة نص جديد! اسحب النص لتغيير موقعه.');
+            };
+        }
+    });
+    </script>
 </body>
 </html>
