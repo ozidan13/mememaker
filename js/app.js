@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let historyIndex = -1;
     const maxHistorySteps = 20;
     
+    // Separate the DOM updates from canvas rendering for better performance
+    let pendingCanvasUpdate = false;
+    
     // Event Listeners
     imageUpload.addEventListener('change', handleImageUpload);
     addTextBtn.addEventListener('click', addTextBlock);
@@ -225,6 +228,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save the current context state
         ctx.save();
         
+        // Check if we need to redraw the base image
+        // We'll use a simple optimization flag to avoid redrawing the image unnecessarily
         try {
             // Apply filters if image is available
             if (uploadedImage) {
@@ -374,51 +379,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function createCanvasText(textBlockId) {
-        // Create draggable text element on canvas
+        if (!canvas) return null;
+        
+        // Create a simpler draggable text element without extra UI clutter
         const canvasText = document.createElement('div');
         canvasText.className = 'canvas-text';
         canvasText.id = textBlockId;
         canvasText.textContent = 'أدخل النص هنا...';
         
-        // Position text at a visible location that makes sense - 
-        // center of the canvas for the first text, slightly offset for subsequent texts
-        const xOffset = textBlocks.length * 20;
-        const yOffset = textBlocks.length * 20;
+        // Calculate initial position - center for first text, offset for others
+        let x, y;
         
-        // Position text in a visible area of the canvas
-        const x = Math.min(canvas.width / 2 - 50 + xOffset, canvas.width - 150);
-        const y = Math.min(canvas.height / 4 + yOffset, canvas.height - 100);
+        if (textBlocks.length === 0) {
+            // First text block should be centered
+            x = canvas.width / 2 - 60;
+            y = canvas.height / 3;
+        } else {
+            // Offset subsequent blocks for better placement
+            const xOffset = (textBlocks.length % 3) * 40;
+            const yOffset = (textBlocks.length % 3) * 40;
+            x = Math.min(canvas.width / 2 - 40 + xOffset, canvas.width - 150);
+            y = Math.min(canvas.height / 3 + yOffset, canvas.height - 100);
+        }
         
-        canvasText.style.left = x + 'px';
-        canvasText.style.top = y + 'px';
+        // Set position and style
+        canvasText.style.left = `${x}px`;
+        canvasText.style.top = `${y}px`;
+        canvasText.style.fontSize = '30px'; // Larger default for better visibility
+        canvasText.style.cursor = 'move';   // Show move cursor for better UX
         
-        // Make text draggable
+        // Add to canvas container
         canvasContainer.appendChild(canvasText);
-        makeTextDraggable(canvasText);
         
-        // Add to text blocks array
-        const newTextBlock = {
+        // Make text draggable with the ultra-fast dragging system
+        makeTextDraggableUltrafast(canvasText);
+        
+        // Add touch support with the improved system
+        addTouchSupportUltrafast(canvasText);
+        
+        // Create block object
+        const textBlock = {
             id: textBlockId,
             element: canvasText,
             text: 'أدخل النص هنا...',
             x: x,
             y: y,
-            fontSize: 20,
+            fontSize: 30, // Larger default
             color: defaultTextColor,
             strokeColor: defaultStrokeColor,
-            strokeWidth: defaultStrokeWidth
+            strokeWidth: 2
         };
         
-        textBlocks.push(newTextBlock);
+        // Add to array
+        textBlocks.push(textBlock);
         
-        // Set as the selected text block
+        // Set as selected
         selectedTextBlockId = textBlockId;
         selectTextBlock(textBlockId);
         
-        // Force a render to ensure the text is visible immediately
+        // Force immediate rendering
         drawImage();
         
-        return newTextBlock;
+        return textBlock;
     }
     
     function updateTextBlock(id, text) {
@@ -447,24 +469,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateTextSize(id, change) {
         const textBlock = textBlocks.find(block => block.id === id);
-        if (textBlock) {
-            // Get current size element
-            const sizeElement = document.getElementById(`${id}-size`);
-            if (sizeElement) {
-                // Update fontSize property with bounds (min 8px, max 72px)
-                const newSize = Math.max(8, Math.min(72, (textBlock.fontSize || 20) + change));
-                textBlock.fontSize = newSize;
-                
-                // Update size display
-                sizeElement.textContent = newSize;
-                
-                // Force immediate render
-                drawImage();
-                
-                // Save state to history
-                saveToHistory();
-            }
-        }
+        if (!textBlock) return;
+        
+        // Get current size element
+        const sizeElement = document.getElementById(`${id}-size`);
+        if (!sizeElement) return;
+        
+        // Calculate new size with limits
+        const newSize = Math.max(8, Math.min(72, (textBlock.fontSize || 20) + change));
+        
+        // Update data model
+        textBlock.fontSize = newSize;
+        
+        // Update DOM
+        sizeElement.textContent = newSize;
+        
+        // Update canvas immediately
+        drawImage();
+        
+        // Save to history
+        saveToHistory();
     }
     
     function updateStrokeColor(id, color) {
@@ -530,13 +554,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         function dragMouseDown(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
             // Get mouse position at startup
             pos3 = e.clientX;
             pos4 = e.clientY;
+            
+            // Set global mouse handlers
             document.onmouseup = closeDragElement;
-            // Call function when mouse moves
             document.onmousemove = elementDrag;
             isDragging = true;
+            
+            // Select this text block
+            const textBlockId = element.id;
+            selectedTextBlockId = textBlockId;
+            selectTextBlock(textBlockId);
         }
         
         function elementDrag(e) {
@@ -549,19 +581,22 @@ document.addEventListener('DOMContentLoaded', function() {
             pos3 = e.clientX;
             pos4 = e.clientY;
             
-            // Update position immediately without requestAnimationFrame
-            // Set element's new position
-            element.style.top = (element.offsetTop - pos2) + 'px';
-            element.style.left = (element.offsetLeft - pos1) + 'px';
+            // Update DOM position immediately
+            const newTop = element.offsetTop - pos2;
+            const newLeft = element.offsetLeft - pos1;
+            
+            // Set element's new position with bounds checking
+            element.style.top = `${Math.max(0, Math.min(canvas.height - 50, newTop))}px`;
+            element.style.left = `${Math.max(0, Math.min(canvas.width - 100, newLeft))}px`;
             
             // Update position in array
             const textBlock = textBlocks.find(block => block.id === element.id);
             if (textBlock) {
-                textBlock.x = element.offsetLeft;
-                textBlock.y = element.offsetTop;
+                textBlock.x = parseInt(element.style.left);
+                textBlock.y = parseInt(element.style.top);
                 
-                // Update the canvas immediately without animation frame for responsive movement
-                drawImage();
+                // Schedule canvas update (but don't block the UI)
+                scheduleCanvasUpdate();
             }
         }
         
@@ -571,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.onmousemove = null;
             isDragging = false;
             
-            // Final update to canvas - don't use requestAnimationFrame for the final update
+            // Force a final canvas update
             drawImage();
             
             // Save state to history after drag is complete
@@ -582,45 +617,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function drawTextBlocks() {
         if (!ctx) return;
         
+        // Process each text block with optimized rendering
         textBlocks.forEach(block => {
             try {
-                if (block.text && block.text.trim() !== '') {
-                    // Use the custom font size and color for each text block
-                    ctx.font = `bold ${block.fontSize}px Tajawal`;
-                    ctx.fillStyle = block.color || defaultTextColor;
+                if (!block.text || block.text.trim() === '') return;
+                
+                // Set font properties - use a simpler, cleaner font setup
+                ctx.font = `bold ${block.fontSize}px Arial, sans-serif`;
+                ctx.fillStyle = block.color || defaultTextColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Calculate center position
+                const x = block.x + 50;
+                const y = block.y + 25;
+                
+                // Create a clean, readable text with simple outline
+                // Draw text stroke first (simpler approach)
+                if (block.strokeWidth > 0) {
                     ctx.strokeStyle = block.strokeColor || defaultStrokeColor;
-                    ctx.lineWidth = block.strokeWidth || defaultStrokeWidth;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    
-                    // Calculate position relative to canvas
-                    // Make sure element has been rendered completely
-                    let x, y;
-                    if (block.element && block.element.offsetWidth > 0 && block.element.offsetHeight > 0) {
-                        x = block.x + (block.element.offsetWidth / 2);
-                        y = block.y + (block.element.offsetHeight / 2);
-                    } else {
-                        // Fallback position if element dimensions aren't available
-                        x = block.x + 50;
-                        y = block.y + 25;
-                    }
-                    
-                    // Create a more visible stroke effect by drawing multiple strokes
-                    // This creates a more prominent outline that works on any background
-                    if (block.strokeWidth > 0) {
-                        // Outer stroke for better visibility
-                        const outerStrokeWidth = block.strokeWidth + 2;
-                        ctx.lineWidth = outerStrokeWidth;
-                        ctx.strokeText(block.text, x, y);
-                        
-                        // Inner stroke with original width
-                        ctx.lineWidth = block.strokeWidth;
-                        ctx.strokeText(block.text, x, y);
-                    }
-                    
-                    // Draw the text fill last for best quality
-                    ctx.fillText(block.text, x, y);
+                    ctx.lineWidth = block.strokeWidth;
+                    ctx.strokeText(block.text, x, y);
                 }
+                
+                // Draw text fill on top
+                ctx.fillText(block.text, x, y);
             } catch (error) {
                 console.error("Error drawing text block:", error);
             }
@@ -691,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Add touch support for a single element
+    // Add touch support with better performance
     function addTouchSupportForElement(element) {
         let touchStartX, touchStartY;
         let initialX, initialY;
@@ -702,38 +723,51 @@ document.addEventListener('DOMContentLoaded', function() {
             touchStartY = touch.clientY;
             initialX = element.offsetLeft;
             initialY = element.offsetTop;
+            
+            // Select this text block
+            const textBlockId = element.id;
+            selectedTextBlockId = textBlockId;
+            selectTextBlock(textBlockId);
+            
             e.preventDefault();
         }, { passive: false });
         
         element.addEventListener('touchmove', function(e) {
-            if (touchStartX && touchStartY) {
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - touchStartX;
-                const deltaY = touch.clientY - touchStartY;
+            if (!touchStartX || !touchStartY) return;
+            
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            
+            // Calculate new position with bounds checking
+            const newLeft = Math.max(0, Math.min(canvas.width - 100, initialX + deltaX));
+            const newTop = Math.max(0, Math.min(canvas.height - 50, initialY + deltaY));
+            
+            // Update DOM position immediately 
+            element.style.left = `${newLeft}px`;
+            element.style.top = `${newTop}px`;
+            
+            // Update text block data
+            const textBlock = textBlocks.find(block => block.id === element.id);
+            if (textBlock) {
+                textBlock.x = newLeft;
+                textBlock.y = newTop;
                 
-                // Update position immediately for better responsiveness
-                element.style.left = (initialX + deltaX) + 'px';
-                element.style.top = (initialY + deltaY) + 'px';
-                
-                // Update position in array
-                const textBlock = textBlocks.find(block => block.id === element.id);
-                if (textBlock) {
-                    textBlock.x = element.offsetLeft;
-                    textBlock.y = element.offsetTop;
-                }
-                
-                e.preventDefault();
+                // Schedule a canvas update
+                scheduleCanvasUpdate();
             }
+            
+            e.preventDefault();
         }, { passive: false });
         
         element.addEventListener('touchend', function() {
             touchStartX = null;
             touchStartY = null;
             
-            // Final update to canvas
+            // Force final canvas update
             drawImage();
             
-            // Save state after touch movement
+            // Save to history
             saveToHistory();
         });
     }
@@ -790,25 +824,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Update text position based on keyboard navigation
+    // Keyboard navigation with improved performance
     function updateTextPosition(id, deltaX, deltaY) {
         const textBlock = textBlocks.find(block => block.id === id);
-        if (textBlock && textBlock.element) {
-            const newX = Math.max(0, Math.min(canvas.width - textBlock.element.offsetWidth, 
-                                            textBlock.x + deltaX));
-            const newY = Math.max(0, Math.min(canvas.height - textBlock.element.offsetHeight, 
-                                            textBlock.y + deltaY));
-            
-            // Update position
-            textBlock.x = newX;
-            textBlock.y = newY;
-            textBlock.element.style.left = newX + 'px';
-            textBlock.element.style.top = newY + 'px';
-            
-            // Update canvas immediately without animation frame for responsive movement
-            drawImage();
-        }
+        if (!textBlock || !textBlock.element) return;
         
+        // Calculate new position with bounds checking
+        const newX = Math.max(0, Math.min(canvas.width - 100, textBlock.x + deltaX));
+        const newY = Math.max(0, Math.min(canvas.height - 50, textBlock.y + deltaY));
+        
+        // Update model
+        textBlock.x = newX;
+        textBlock.y = newY;
+        
+        // Update DOM
+        textBlock.element.style.left = `${newX}px`;
+        textBlock.element.style.top = `${newY}px`;
+        
+        // Update canvas
+        drawImage();
+        
+        // Save state
         saveToHistory();
     }
     
@@ -1290,6 +1326,230 @@ document.addEventListener('DOMContentLoaded', function() {
             if (inputField) {
                 inputField.focus();
             }
+        }
+    }
+
+    // Ultra-fast dragging system that decouples DOM updates from canvas rendering
+    function makeTextDraggableUltrafast(element) {
+        let startX, startY;
+        let startLeft, startTop;
+        let isDragging = false;
+        
+        // Use more modern event listeners instead of direct properties
+        element.addEventListener('mousedown', startDrag);
+        
+        function startDrag(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Select this text block
+            const textBlockId = element.id;
+            selectedTextBlockId = textBlockId;
+            selectTextBlock(textBlockId);
+            
+            // Store initial positions
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = parseInt(element.style.left) || element.offsetLeft;
+            startTop = parseInt(element.style.top) || element.offsetTop;
+            
+            // Set global event handlers
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+            
+            isDragging = true;
+        }
+        
+        function dragMove(e) {
+            if (!isDragging) return;
+            
+            // Calculate new position - direct calculation is faster
+            const newLeft = startLeft + (e.clientX - startX);
+            const newTop = startTop + (e.clientY - startY);
+            
+            // Apply bounds checking and update DOM position only (no canvas updates during drag)
+            element.style.left = `${Math.max(0, Math.min(canvas.width - 100, newLeft))}px`;
+            element.style.top = `${Math.max(0, Math.min(canvas.height - 50, newTop))}px`;
+            
+            // Don't update canvas during drag - just update the text block data
+            const textBlock = textBlocks.find(block => block.id === element.id);
+            if (textBlock) {
+                textBlock.x = parseInt(element.style.left);
+                textBlock.y = parseInt(element.style.top);
+            }
+        }
+        
+        function dragEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            // Clean up event listeners
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            
+            // Update the text block data
+            const textBlock = textBlocks.find(block => block.id === element.id);
+            if (textBlock) {
+                textBlock.x = parseInt(element.style.left);
+                textBlock.y = parseInt(element.style.top);
+                
+                // Now update canvas only once at the end of dragging
+                drawImage();
+                
+                // Save state to history
+                saveToHistory();
+            }
+        }
+    }
+    
+    // Ultra-fast touch support that doesn't bog down on mobile
+    function addTouchSupportUltrafast(element) {
+        let startX, startY;
+        let startLeft, startTop;
+        
+        element.addEventListener('touchstart', function(e) {
+            // Get the first touch
+            const touch = e.touches[0];
+            
+            // Select this text block
+            const textBlockId = element.id;
+            selectedTextBlockId = textBlockId;
+            selectTextBlock(textBlockId);
+            
+            // Store starting positions
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startLeft = parseInt(element.style.left) || element.offsetLeft;
+            startTop = parseInt(element.style.top) || element.offsetTop;
+            
+            e.preventDefault();
+        }, { passive: false });
+        
+        element.addEventListener('touchmove', function(e) {
+            // Get the first touch
+            const touch = e.touches[0];
+            
+            // Calculate the new position - direct calculation
+            const newLeft = startLeft + (touch.clientX - startX);
+            const newTop = startTop + (touch.clientY - startY);
+            
+            // Update DOM position with bounds checking
+            element.style.left = `${Math.max(0, Math.min(canvas.width - 100, newLeft))}px`;
+            element.style.top = `${Math.max(0, Math.min(canvas.height - 50, newTop))}px`;
+            
+            // Update data model but don't render canvas yet
+            const textBlock = textBlocks.find(block => block.id === element.id);
+            if (textBlock) {
+                textBlock.x = parseInt(element.style.left);
+                textBlock.y = parseInt(element.style.top);
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+        
+        element.addEventListener('touchend', function() {
+            // Update the text block data
+            const textBlock = textBlocks.find(block => block.id === element.id);
+            if (textBlock) {
+                textBlock.x = parseInt(element.style.left);
+                textBlock.y = parseInt(element.style.top);
+                
+                // Now update canvas only once at the end
+                drawImage();
+                
+                // Save state to history
+                saveToHistory();
+            }
+        });
+    }
+    
+    // Make sure text blocks are properly styled for cleaner appearance
+    const style = document.createElement('style');
+    style.textContent = `
+        .canvas-text {
+            position: absolute;
+            background: transparent;
+            min-width: 100px;
+            text-align: center;
+            cursor: move;
+            user-select: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            border: 1px dashed transparent;
+            color: white;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            /* Better text shadow for improved readability on any background */
+            text-shadow: 
+                2px 2px 0 #000,
+                -2px 2px 0 #000,
+                2px -2px 0 #000,
+                -2px -2px 0 #000,
+                0px 2px 0 #000,
+                0px -2px 0 #000,
+                2px 0px 0 #000,
+                -2px 0px 0 #000;
+        }
+        .canvas-text.selected {
+            border-color: #00a8ff;
+            border-width: 2px;
+            border-style: dashed;
+        }
+        .canvas-text:hover {
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Override the original addTextBlock to ensure first text always works properly
+    const originalAddTextBlock = addTextBlock;
+    addTextBlock = function() {
+        // Call original function
+        originalAddTextBlock();
+        
+        // Make sure first text block appears correctly
+        if (textBlocks.length === 1 && canvas) {
+            setTimeout(() => {
+                try {
+                    if (!textBlocks[0] || !textBlocks[0].element) return;
+                    
+                    // Set a very clear center position
+                    const centerX = Math.max(50, canvas.width / 2 - 60);
+                    const centerY = Math.max(50, canvas.height / 3);
+                    
+                    // Update both model and DOM
+                    textBlocks[0].x = centerX;
+                    textBlocks[0].y = centerY;
+                    textBlocks[0].element.style.left = `${centerX}px`;
+                    textBlocks[0].element.style.top = `${centerY}px`;
+                    
+                    // Force larger font
+                    textBlocks[0].fontSize = 32;
+                    const sizeElement = document.getElementById(`${textBlocks[0].id}-size`);
+                    if (sizeElement) {
+                        sizeElement.textContent = '32';
+                    }
+                    
+                    // Force render
+                    drawImage();
+                } catch (error) {
+                    console.error("Error handling first text block:", error);
+                }
+            }, 250); // Slightly longer timeout to ensure DOM is ready
+        }
+    };
+
+    function scheduleCanvasUpdate() {
+        if (!pendingCanvasUpdate) {
+            pendingCanvasUpdate = true;
+            // Use requestAnimationFrame for optimal performance
+            requestAnimationFrame(function() {
+                drawImage();
+                pendingCanvasUpdate = false;
+            });
         }
     }
 });
