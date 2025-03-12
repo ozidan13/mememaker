@@ -389,93 +389,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const x = Math.min(canvas.width / 2 - 50 + xOffset, canvas.width - 150);
         const y = Math.min(canvas.height / 4 + yOffset, canvas.height - 100);
         
-        canvasText.style.top = y + 'px';
         canvasText.style.left = x + 'px';
+        canvasText.style.top = y + 'px';
         
-        // Explicitly set initial font size
-        const initialFontSize = 24; // Slightly larger default font size for better visibility
-        canvasText.style.fontSize = `${initialFontSize}px`;
-        canvasText.style.color = defaultTextColor;
-        
-        // Add inline controls
-        const controls = document.createElement('div');
-        controls.className = 'canvas-text-controls';
-        controls.innerHTML = `
-            <button class="canvas-text-control-btn decrease-size-inline" data-id="${textBlockId}" title="تصغير النص">
-                <i class="fas fa-search-minus"></i>
-            </button>
-            <button class="canvas-text-control-btn increase-size-inline" data-id="${textBlockId}" title="تكبير النص">
-                <i class="fas fa-search-plus"></i>
-            </button>
-        `;
-        canvasText.appendChild(controls);
-        
-        // Add to canvas container
+        // Make text draggable
         canvasContainer.appendChild(canvasText);
-        
-        // Add event listeners for inline controls
-        const decreaseSizeInlineBtn = canvasText.querySelector(`.decrease-size-inline[data-id="${textBlockId}"]`);
-        const increaseSizeInlineBtn = canvasText.querySelector(`.increase-size-inline[data-id="${textBlockId}"]`);
-        
-        decreaseSizeInlineBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            updateTextSize(textBlockId, -2);
-        });
-        
-        increaseSizeInlineBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            updateTextSize(textBlockId, 2);
-        });
-        
-        // Add click handler to select this text block
-        canvasText.addEventListener('click', function(e) {
-            // Deselect previous selection
-            if (selectedTextBlockId && selectedTextBlockId !== textBlockId) {
-                const prevSelected = document.getElementById(selectedTextBlockId);
-                if (prevSelected) {
-                    prevSelected.classList.remove('selected');
-                }
-            }
-            
-            // Select this block
-            canvasText.classList.add('selected');
-            selectedTextBlockId = textBlockId;
-            
-            const inputField = document.getElementById(`${textBlockId}-input`);
-            if (inputField) {
-                inputField.focus();
-            }
-            
-            e.stopPropagation();
-        });
-        
-        // Make text draggable with mouse
         makeTextDraggable(canvasText);
         
-        // Add touch support for this element
-        addTouchSupportForElement(canvasText);
-        
         // Add to text blocks array
-        textBlocks.push({
+        const newTextBlock = {
             id: textBlockId,
+            element: canvasText,
             text: 'أدخل النص هنا...',
             x: x,
             y: y,
-            fontSize: initialFontSize,
+            fontSize: 20,
             color: defaultTextColor,
             strokeColor: defaultStrokeColor,
-            strokeWidth: defaultStrokeWidth,
-            element: canvasText
-        });
+            strokeWidth: defaultStrokeWidth
+        };
         
-        // Auto-select the newly created text
-        canvasText.classList.add('selected');
+        textBlocks.push(newTextBlock);
+        
+        // Set as the selected text block
         selectedTextBlockId = textBlockId;
+        selectTextBlock(textBlockId);
         
-        // Ensure the canvas is updated immediately
-        setTimeout(() => {
-            drawImage();
-        }, 50);
+        // Force a render to ensure the text is visible immediately
+        drawImage();
+        
+        return newTextBlock;
     }
     
     function updateTextBlock(id, text) {
@@ -503,29 +446,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateTextSize(id, change) {
-        // Update text size in array
         const textBlock = textBlocks.find(block => block.id === id);
         if (textBlock) {
-            // Ensure font size stays within reasonable limits (10px to 60px)
-            const newSize = Math.max(10, Math.min(60, textBlock.fontSize + change));
-            textBlock.fontSize = newSize;
-            
-            // Update element's font size
-            if (textBlock.element) {
-                textBlock.element.style.fontSize = `${newSize}px`;
+            // Get current size element
+            const sizeElement = document.getElementById(`${id}-size`);
+            if (sizeElement) {
+                // Update fontSize property with bounds (min 8px, max 72px)
+                const newSize = Math.max(8, Math.min(72, (textBlock.fontSize || 20) + change));
+                textBlock.fontSize = newSize;
+                
+                // Update size display
+                sizeElement.textContent = newSize;
+                
+                // Force immediate render
+                drawImage();
+                
+                // Save state to history
+                saveToHistory();
             }
-            
-            // Update size display in controls
-            const sizeDisplay = document.getElementById(`${id}-size`);
-            if (sizeDisplay) {
-                sizeDisplay.textContent = newSize;
-            }
-            
-            // Force a full redraw to update text appearance
-            drawImage();
-            
-            // Save to history after size change
-            saveToHistory();
         }
     }
     
@@ -621,6 +559,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (textBlock) {
                 textBlock.x = element.offsetLeft;
                 textBlock.y = element.offsetTop;
+                
+                // Update the canvas immediately without animation frame for responsive movement
+                drawImage();
             }
         }
         
@@ -643,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         textBlocks.forEach(block => {
             try {
-                if (block.text && block.text.trim() !== '' && block.element) {
+                if (block.text && block.text.trim() !== '') {
                     // Use the custom font size and color for each text block
                     ctx.font = `bold ${block.fontSize}px Tajawal`;
                     ctx.fillStyle = block.color || defaultTextColor;
@@ -655,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Calculate position relative to canvas
                     // Make sure element has been rendered completely
                     let x, y;
-                    if (block.element.offsetWidth > 0 && block.element.offsetHeight > 0) {
+                    if (block.element && block.element.offsetWidth > 0 && block.element.offsetHeight > 0) {
                         x = block.x + (block.element.offsetWidth / 2);
                         y = block.y + (block.element.offsetHeight / 2);
                     } else {
@@ -681,7 +622,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.fillText(block.text, x, y);
                 }
             } catch (error) {
-                console.error("Error drawing text block:", error, block);
+                console.error("Error drawing text block:", error);
             }
         });
     }
@@ -864,8 +805,8 @@ document.addEventListener('DOMContentLoaded', function() {
             textBlock.element.style.left = newX + 'px';
             textBlock.element.style.top = newY + 'px';
             
-            // Update canvas
-            requestAnimationFrame(() => drawImage());
+            // Update canvas immediately without animation frame for responsive movement
+            drawImage();
         }
         
         saveToHistory();
@@ -1330,5 +1271,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ensure canvas is redrawn with the restored text blocks
         drawImage();
+    }
+
+    // Add selectTextBlock function if it doesn't exist
+    function selectTextBlock(id) {
+        // Deselect all text blocks
+        document.querySelectorAll('.canvas-text').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Select the specified text block
+        const element = document.getElementById(id);
+        if (element) {
+            element.classList.add('selected');
+            
+            // Focus on the corresponding input field
+            const inputField = document.getElementById(`${id}-input`);
+            if (inputField) {
+                inputField.focus();
+            }
+        }
     }
 });
